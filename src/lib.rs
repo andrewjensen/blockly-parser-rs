@@ -1,7 +1,5 @@
 extern crate sxd_document;
 
-use std::str;
-use std::string::String;
 use std::collections::HashMap;
 
 use sxd_document::{
