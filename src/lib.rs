@@ -30,8 +30,8 @@ pub struct StatementBody {
 pub struct Block {
     pub block_type: String,
     pub id: String,
-    pub fields: Option<HashMap<String, FieldValue>>,
-    pub statements: Option<HashMap<String, StatementBody>>,
+    pub fields: HashMap<String, FieldValue>,
+    pub statements: HashMap<String, StatementBody>,
 }
 
 #[derive(PartialEq, Debug)]
@@ -61,52 +61,8 @@ impl Block {
         Self {
             block_type: "".to_string(),
             id: "".to_string(),
-            fields: None,
-            statements: None
-        }
-    }
-
-    pub fn add_field(&mut self, name: String, value: FieldValue) {
-        match self.fields {
-            Some(ref mut f) => {
-                f.insert(name.to_owned(), value);
-            },
-            None => {
-                let mut new_map: HashMap<String, FieldValue> = HashMap::new();
-                new_map.insert(name.to_owned(), value);
-                self.fields = Some(new_map);
-            }
-        }
-    }
-
-    pub fn get_field(&self, name: &str) -> Option<&FieldValue> {
-        match self.fields {
-            Some(ref fields) => {
-                fields.get(name)
-            },
-            None => None
-        }
-    }
-
-    pub fn add_statement_body(&mut self, name: String, body: StatementBody) {
-        match self.statements {
-            Some(ref mut s) => {
-                s.insert(name.to_owned(), body);
-            },
-            None => {
-                let mut new_map: HashMap<String, StatementBody> = HashMap::new();
-                new_map.insert(name.to_owned(), body);
-                self.statements = Some(new_map);
-            }
-        };
-    }
-
-    pub fn get_statement(&self, name: &str) -> Option<&StatementBody> {
-        match self.statements {
-            Some(ref statements) => {
-                statements.get(name)
-            },
-            None => None
+            fields: HashMap::new(),
+            statements: HashMap::new()
         }
     }
 }
@@ -226,13 +182,13 @@ fn make_block(block_el: Element) -> Block {
                             Some(first_child_block) => make_statement_body(first_child_block),
                             None => StatementBody::new()
                         };
-                        block.add_statement_body(statement_name, statement_body);
+                        block.statements.insert(statement_name, statement_body);
                     },
                     "field" => {
                         let field_el = child_el;
                         let field_name = get_attribute(field_el, "name").unwrap();
                         let field_value = make_field_value(field_el);
-                        block.add_field(field_name, field_value);
+                        block.fields.insert(field_name, field_value);
                     },
                     _ => {}
                 }
@@ -331,9 +287,7 @@ mod test {
         let block = make_block(root_element.unwrap());
         assert_eq!(block.block_type, "inner_loop");
         assert_eq!(block.id, "]Lb|t?wfd#;s)[llJx8Y");
-        assert!(block.fields.is_some());
-        assert!(block.statements.is_some());
-        let count_field = block.get_field("COUNT");
+        let count_field = block.fields.get("COUNT");
         assert!(count_field.is_some());
         assert_eq!(count_field.unwrap(), &FieldValue::SimpleField("3".to_string()));
     }
@@ -417,9 +371,8 @@ mod test {
         let main_loop_block = group.blocks.get(0).unwrap();
         assert_eq!(main_loop_block.block_type, "main_loop");
         assert_eq!(main_loop_block.id, "[.)/fqUYv92(mzb{?:~u");
-        assert!(main_loop_block.statements.is_some());
 
-        let main_loop_statements = main_loop_block.statements.as_ref().unwrap();
+        let main_loop_statements = &main_loop_block.statements;
         assert_eq!(main_loop_statements.len(), 1);
         assert!(main_loop_statements.contains_key("BODY"));
 
@@ -430,10 +383,9 @@ mod test {
         let inner_loop_block = main_loop_body_statement.blocks.get(0).unwrap();
         assert_eq!(inner_loop_block.block_type, "inner_loop");
         assert_eq!(inner_loop_block.id, "]Lb|t?wfd#;s)[llJx8Y");
-        assert!(inner_loop_block.fields.is_some());
-        assert_eq!(inner_loop_block.get_field("COUNT"), Some(&FieldValue::SimpleField("3".to_string())));
+        assert_eq!(inner_loop_block.fields.get("COUNT"), Some(&FieldValue::SimpleField("3".to_string())));
 
-        let inner_loop_statement_maybe = inner_loop_block.get_statement("BODY");
+        let inner_loop_statement_maybe = inner_loop_block.statements.get("BODY");
         assert!(inner_loop_statement_maybe.is_some());
         let inner_loop_statement = inner_loop_statement_maybe.unwrap();
         assert_eq!(inner_loop_statement.blocks.len(), 2);
@@ -441,7 +393,7 @@ mod test {
         let led_on_block = inner_loop_statement.blocks.get(0).unwrap();
         assert_eq!(led_on_block.block_type, "led_on");
         assert_eq!(led_on_block.id, "^3xb.m4E9i0;3$R10(=5");
-        assert_eq!(led_on_block.get_field("TIME"), Some(&FieldValue::SimpleField("300".to_string())));
+        assert_eq!(led_on_block.fields.get("TIME"), Some(&FieldValue::SimpleField("300".to_string())));
 
         let led_off_block = inner_loop_statement.blocks.get(1).unwrap();
         assert_eq!(led_off_block.block_type, "led_off");
