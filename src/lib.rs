@@ -91,17 +91,15 @@ pub fn program_from_xml(xml: &str) -> Program {
     let xml_element = get_xml_element(document);
 
     for child in xml_element.children().iter() {
-        match child {
-            &ChildOfElement::Element(el) => {
-                let element_name = el.name().local_part();
-                match element_name {
-                    "block" => {
-                        program.groups.push(StatementBody::new(Some(el)));
-                    },
-                    _ => {}
-                }
-            },
-            _ => {}
+        if let &ChildOfElement::Element(el) = child {
+            let element_name = el.name().local_part();
+            match element_name {
+                "block" => {
+                    program.groups.push(StatementBody::new(Some(el)));
+                },
+                // TODO: handle `variables`
+                _ => {}
+            }
         }
     }
 
@@ -112,41 +110,27 @@ fn get_next_block_element(block_el: Element) -> Option<Element> {
     let next_el: Option<Element> = {
         let mut found: Option<Element> = None;
         for child in block_el.children().iter() {
-            match child {
-                &ChildOfElement::Element(el) => {
-                    match el.name().local_part() {
-                        "next" => {
-                            found = Some(el);
-                            break;
-                        },
-                        _ => {}
-                    }
-                },
-                _ => {}
+            if let &ChildOfElement::Element(el) = child {
+                if el.name().local_part() == "next" {
+                    found = Some(el);
+                    break;
+                }
             }
         }
         found
     };
 
-    match next_el {
-        Some(next_el) => {
-            for child in next_el.children().iter() {
-                match child {
-                    &ChildOfElement::Element(el) => {
-                        match el.name().local_part() {
-                            "block" => {
-                                return Some(el);
-                            },
-                            _ => {}
-                        }
-                    },
-                    _ => {}
+    if let Some(next_el) = next_el {
+        for child in next_el.children().iter() {
+            if let &ChildOfElement::Element(el) = child {
+                if el.name().local_part() == "block" {
+                    return Some(el);
                 }
             }
-            None
-        },
-        None => None
+        }
     }
+
+    None
 }
 
 fn make_block(block_el: Element) -> Block {
@@ -202,14 +186,11 @@ fn get_xml_element(document: Document) -> Element {
     let root: Root = document.root();
     let root_children = root.children();
     for child in root_children.iter() {
-        match child {
-            &ChildOfRoot::Element(el) => {
-                let element_name = el.name().local_part();
-                if element_name == "xml" {
-                    return el;
-                }
-            },
-            _ => {}
+        if let &ChildOfRoot::Element(el) = child {
+            let element_name = el.name().local_part();
+            if element_name == "xml" {
+                return el;
+            }
         }
     }
     panic!("Cannot find xml element!");
@@ -217,11 +198,8 @@ fn get_xml_element(document: Document) -> Element {
 
 fn get_first_child_element(element: Element) -> Option<Element> {
     for child in element.children().iter() {
-        match child {
-            &ChildOfElement::Element(el) => {
-                return Some(el);
-            },
-            _ => {}
+        if let &ChildOfElement::Element(el) = child {
+            return Some(el);
         }
     }
     None
@@ -247,12 +225,9 @@ mod test {
         let document: Document = package.as_document();
         let mut root_element: Option<Element> = None;
         for child in document.root().children().iter() {
-            match child {
-                &ChildOfRoot::Element(el) => {
-                    root_element = Some(el);
-                    break;
-                },
-                _ => {}
+            if let &ChildOfRoot::Element(el) = child {
+                root_element = Some(el);
+                break;
             }
         }
         root_element
