@@ -100,7 +100,7 @@ impl Block {
                     "field" => {
                         let field_el = child_el;
                         let field_name = get_attribute(field_el, "name").unwrap();
-                        let field_value = make_field_value(field_el);
+                        let field_value = FieldValue::new(field_el);
                         block.fields.insert(field_name, field_value);
                     },
                     _ => {}
@@ -112,6 +112,20 @@ impl Block {
     }
 }
 
+impl FieldValue {
+    fn new(field_el: Element) -> Self {
+        for child in field_el.children().iter() {
+            match child {
+                &ChildOfElement::Text(text_node) => {
+                    let value = text_node.text().to_string();
+                    return FieldValue::SimpleField(value);
+                },
+                _ => panic!("TODO: Implement expression fields")
+            }
+        }
+        panic!("Expected child nodes for field");
+    }
+}
 
 // Utilities for creating Blockly data structures
 
@@ -164,19 +178,6 @@ fn get_next_block_element(block_el: Element) -> Option<Element> {
     }
 
     None
-}
-
-fn make_field_value(field_el: Element) -> FieldValue {
-    for child in field_el.children().iter() {
-        match child {
-            &ChildOfElement::Text(text_node) => {
-                let value = text_node.text().to_string();
-                return FieldValue::SimpleField(value);
-            },
-            _ => panic!("TODO: Implement expression fields")
-        }
-    }
-    panic!("Expected child nodes for field");
 }
 
 // General DOM utilities
