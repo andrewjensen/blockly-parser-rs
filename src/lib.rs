@@ -47,9 +47,23 @@ impl Program {
 }
 
 impl StatementBody {
-    pub fn new() -> Self {
+    fn new(first_block: Option<Element>) -> Self {
+        let mut blocks = Vec::new();
+        if let Some(el) = first_block {
+            // Create each block, put them into the statement body
+            let mut block_el: Element;
+            block_el = el;
+            loop {
+                blocks.push(make_block(block_el));
+                if let Some(next_block) = get_next_block_element(block_el) {
+                    block_el = next_block;
+                } else {
+                    break;
+                }
+            }
+        }
         Self {
-            blocks: Vec::new()
+            blocks
         }
     }
 }
@@ -82,7 +96,7 @@ pub fn program_from_xml(xml: &str) -> Program {
                 let element_name = el.name().local_part();
                 match element_name {
                     "block" => {
-                        program.groups.push(make_statement_body(el));
+                        program.groups.push(StatementBody::new(Some(el)));
                     },
                     _ => {}
                 }
@@ -135,28 +149,6 @@ fn get_next_block_element(block_el: Element) -> Option<Element> {
     }
 }
 
-fn make_statement_body(first_block: Element) -> StatementBody {
-    let mut body = StatementBody::new();
-
-    // Create each block, put them into the statement body
-    let mut block_el: Element;
-    block_el = first_block;
-    loop {
-        body.blocks.push(make_block(block_el));
-        let next_block = get_next_block_element(block_el);
-        match next_block {
-            Some(next_block_el) => {
-                block_el = next_block_el;
-            },
-            None => {
-                break;
-            }
-        }
-    }
-
-    body
-}
-
 fn make_block(block_el: Element) -> Block {
     let mut block = Block::new();
     for attribute in block_el.attributes().iter() {
@@ -177,8 +169,8 @@ fn make_block(block_el: Element) -> Block {
                         let statement_el = child_el;
                         let statement_name = get_attribute(statement_el, "name").unwrap();
                         let statement_body = match get_first_child_element(statement_el) {
-                            Some(first_child_block) => make_statement_body(first_child_block),
-                            None => StatementBody::new()
+                            Some(first_child_block) => StatementBody::new(Some(first_child_block)),
+                            None => StatementBody::new(None)
                         };
                         block.statements.insert(statement_name, statement_body);
                     },
