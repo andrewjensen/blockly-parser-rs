@@ -257,18 +257,7 @@ fn get_attribute(element: Element, attribute_name: &str) -> Option<String> {
 mod test {
     use super::*;
 
-    #[test]
-    fn test_make_block() {
-        let xml: &str = r#"
-            <block type="inner_loop" id="]Lb|t?wfd#;s)[llJx8Y">
-                <field name="COUNT">3</field>
-                <statement name="BODY">
-                </statement>
-            </block>
-        "#;
-
-        // TODO: move into test helper function
-        let package: Package = parser::parse(xml).expect("Failed to parse XML!");
+    fn get_fragment_root(package: &Package) -> Option<Element> {
         let document: Document = package.as_document();
         let mut root_element: Option<Element> = None;
         for child in document.root().children().iter() {
@@ -280,9 +269,22 @@ mod test {
                 _ => {}
             }
         }
+        root_element
+    }
 
-        assert!(root_element.is_some());
-        let block = make_block(root_element.unwrap());
+    #[test]
+    fn test_make_block() {
+        let xml: &str = r#"
+            <block type="inner_loop" id="]Lb|t?wfd#;s)[llJx8Y">
+                <field name="COUNT">3</field>
+                <statement name="BODY">
+                </statement>
+            </block>
+        "#;
+        let fragment: Package = parser::parse(xml).expect("Failed to parse XML!");
+        let root_element = get_fragment_root(&fragment).unwrap();
+
+        let block = make_block(root_element);
         assert_eq!(block.block_type, "inner_loop");
         assert_eq!(block.id, "]Lb|t?wfd#;s)[llJx8Y");
         let count_field = block.fields.get("COUNT");
@@ -302,23 +304,10 @@ mod test {
                 </next>
             </block>
         "#;
+        let fragment: Package = parser::parse(xml).expect("Failed to parse XML!");
+        let root_element = get_fragment_root(&fragment).unwrap();
 
-        // TODO: move into test helper function
-        let package: Package = parser::parse(xml).expect("Failed to parse XML!");
-        let document: Document = package.as_document();
-        let mut root_element: Option<Element> = None;
-        for child in document.root().children().iter() {
-            match child {
-                &ChildOfRoot::Element(el) => {
-                    root_element = Some(el);
-                    break;
-                },
-                _ => {}
-            }
-        }
-
-        assert!(root_element.is_some());
-        let next_block = get_next_block_element(root_element.unwrap());
+        let next_block = get_next_block_element(root_element);
         assert!(next_block.is_some());
         let next_block_unwrapped = next_block.unwrap();
         assert_eq!(get_attribute(next_block_unwrapped, "type"), Some("led_off".to_string()));
