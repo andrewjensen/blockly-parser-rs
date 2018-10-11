@@ -54,7 +54,7 @@ impl StatementBody {
             let mut block_el: Element;
             block_el = el;
             loop {
-                blocks.push(make_block(block_el));
+                blocks.push(Block::new(block_el));
                 if let Some(next_block) = get_next_block_element(block_el) {
                     block_el = next_block;
                 } else {
@@ -69,13 +69,46 @@ impl StatementBody {
 }
 
 impl Block {
-    pub fn new() -> Self {
-        Self {
+    fn new(block_el: Element) -> Self {
+        let mut block = Self {
             block_type: "".to_string(),
             id: "".to_string(),
             fields: HashMap::new(),
             statements: HashMap::new()
+        };
+
+        for attribute in block_el.attributes().iter() {
+            let name = attribute.name().local_part();
+            let value = attribute.value().to_string();
+            match name {
+                "type" => { block.block_type = value; },
+                "id" => { block.id = value; },
+                _ => {}
+            }
         }
+
+        for child in block_el.children().iter() {
+            if let &ChildOfElement::Element(child_el) = child {
+                let child_name = child_el.name().local_part();
+                match child_name {
+                    "statement" => {
+                        let statement_el = child_el;
+                        let statement_name = get_attribute(statement_el, "name").unwrap();
+                        let statement_body = StatementBody::new(get_first_child_element(statement_el));
+                        block.statements.insert(statement_name, statement_body);
+                    },
+                    "field" => {
+                        let field_el = child_el;
+                        let field_name = get_attribute(field_el, "name").unwrap();
+                        let field_value = make_field_value(field_el);
+                        block.fields.insert(field_name, field_value);
+                    },
+                    _ => {}
+                }
+            }
+        }
+
+        block
     }
 }
 
@@ -131,40 +164,6 @@ fn get_next_block_element(block_el: Element) -> Option<Element> {
     }
 
     None
-}
-
-fn make_block(block_el: Element) -> Block {
-    let mut block = Block::new();
-    for attribute in block_el.attributes().iter() {
-        let name = attribute.name().local_part();
-        let value = attribute.value().to_string();
-        match name {
-            "type" => { block.block_type = value; },
-            "id" => { block.id = value; },
-            _ => {}
-        }
-    }
-    for child in block_el.children().iter() {
-        if let &ChildOfElement::Element(child_el) = child {
-            let child_name = child_el.name().local_part();
-            match child_name {
-                "statement" => {
-                    let statement_el = child_el;
-                    let statement_name = get_attribute(statement_el, "name").unwrap();
-                    let statement_body = StatementBody::new(get_first_child_element(statement_el));
-                    block.statements.insert(statement_name, statement_body);
-                },
-                "field" => {
-                    let field_el = child_el;
-                    let field_name = get_attribute(field_el, "name").unwrap();
-                    let field_value = make_field_value(field_el);
-                    block.fields.insert(field_name, field_value);
-                },
-                _ => {}
-            }
-        }
-    }
-    block
 }
 
 fn make_field_value(field_el: Element) -> FieldValue {
@@ -234,7 +233,7 @@ mod test {
     }
 
     #[test]
-    fn test_make_block() {
+    fn test_new_block() {
         let xml: &str = r#"
             <block type="inner_loop" id="]Lb|t?wfd#;s)[llJx8Y">
                 <field name="COUNT">3</field>
@@ -245,7 +244,7 @@ mod test {
         let fragment: Package = parser::parse(xml).expect("Failed to parse XML!");
         let root_element = get_fragment_root(&fragment).unwrap();
 
-        let block = make_block(root_element);
+        let block = Block::new(root_element);
         assert_eq!(block.block_type, "inner_loop");
         assert_eq!(block.id, "]Lb|t?wfd#;s)[llJx8Y");
         let count_field = block.fields.get("COUNT");
