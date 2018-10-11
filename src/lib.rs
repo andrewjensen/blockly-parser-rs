@@ -8,7 +8,6 @@ use sxd_document::{
 };
 use sxd_document::dom::{
     Document,
-    Root,
     ChildOfRoot,
     Element,
     ChildOfElement,
@@ -135,7 +134,7 @@ pub fn program_from_xml(xml: &str) -> Program {
     let package: Package = parser::parse(xml).expect("Failed to parse XML!");
     let document: Document = package.as_document();
 
-    let xml_element = get_xml_element(document);
+    let xml_element = get_xml_element(document).expect("Failed to find XML element!");
 
     for child in xml_element.children().iter() {
         if let &ChildOfElement::Element(el) = child {
@@ -154,27 +153,30 @@ pub fn program_from_xml(xml: &str) -> Program {
 }
 
 fn get_next_block_element(block_el: Element) -> Option<Element> {
-    let next_el: Option<Element> = {
-        let mut found: Option<Element> = None;
-        for child in block_el.children().iter() {
+    let next_el = block_el.children()
+        .iter()
+        .filter_map(|child| {
             if let &ChildOfElement::Element(el) = child {
                 if el.name().local_part() == "next" {
-                    found = Some(el);
-                    break;
-                }
-            }
-        }
-        found
-    };
-
-    if let Some(next_el) = next_el {
-        for child in next_el.children().iter() {
-            if let &ChildOfElement::Element(el) = child {
-                if el.name().local_part() == "block" {
                     return Some(el);
                 }
             }
-        }
+            None
+        })
+        .next();
+
+    if let Some(next_el) = next_el {
+        return next_el.children()
+            .iter()
+            .filter_map(|child| {
+                if let &ChildOfElement::Element(el) = child {
+                    if el.name().local_part() == "block" {
+                        return Some(el);
+                    }
+                }
+                None
+            })
+            .next();
     }
 
     None
@@ -182,38 +184,45 @@ fn get_next_block_element(block_el: Element) -> Option<Element> {
 
 // General DOM utilities
 
-fn get_xml_element(document: Document) -> Element {
-    let root: Root = document.root();
-    let root_children = root.children();
-    for child in root_children.iter() {
-        if let &ChildOfRoot::Element(el) = child {
-            let element_name = el.name().local_part();
-            if element_name == "xml" {
-                return el;
+fn get_xml_element(document: Document) -> Option<Element> {
+    document.root()
+        .children()
+        .iter()
+        .filter_map(|child| {
+            if let &ChildOfRoot::Element(el) = child {
+                if el.name().local_part() == "xml" {
+                    return Some(el);
+                }
             }
-        }
-    }
-    panic!("Cannot find xml element!");
+            None
+        })
+        .next()
 }
 
 fn get_first_child_element(element: Element) -> Option<Element> {
-    for child in element.children().iter() {
-        if let &ChildOfElement::Element(el) = child {
-            return Some(el);
-        }
-    }
-    None
+    element.children()
+        .iter()
+        .filter_map(|child| {
+            if let &ChildOfElement::Element(el) = child {
+                return Some(el);
+            }
+            None
+        })
+        .next()
 }
 
 fn get_attribute(element: Element, attribute_name: &str) -> Option<String> {
-    for attribute in element.attributes().iter() {
-        let name = attribute.name().local_part();
-        let value = attribute.value().to_string();
-        if name == attribute_name {
-            return Some(value);
-        }
-    }
-    None
+    element.attributes()
+        .iter()
+        .filter_map(|attribute| {
+            let name = attribute.name().local_part();
+            if name == attribute_name {
+                let value = attribute.value().to_string();
+                return Some(value);
+            }
+            None
+        })
+        .next()
 }
 
 
@@ -222,15 +231,17 @@ mod test {
     use super::*;
 
     fn get_fragment_root(package: &Package) -> Option<Element> {
-        let document: Document = package.as_document();
-        let mut root_element: Option<Element> = None;
-        for child in document.root().children().iter() {
-            if let &ChildOfRoot::Element(el) = child {
-                root_element = Some(el);
-                break;
-            }
-        }
-        root_element
+        package.as_document()
+            .root()
+            .children()
+            .iter()
+            .filter_map(|child| {
+                if let &ChildOfRoot::Element(el) = child {
+                    return Some(el);
+                }
+                None
+            })
+            .next()
     }
 
     #[test]
