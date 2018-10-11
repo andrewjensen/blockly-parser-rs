@@ -161,29 +161,23 @@ fn make_block(block_el: Element) -> Block {
         }
     }
     for child in block_el.children().iter() {
-        match child {
-            &ChildOfElement::Element(child_el) => {
-                let child_name = child_el.name().local_part();
-                match child_name {
-                    "statement" => {
-                        let statement_el = child_el;
-                        let statement_name = get_attribute(statement_el, "name").unwrap();
-                        let statement_body = match get_first_child_element(statement_el) {
-                            Some(first_child_block) => StatementBody::new(Some(first_child_block)),
-                            None => StatementBody::new(None)
-                        };
-                        block.statements.insert(statement_name, statement_body);
-                    },
-                    "field" => {
-                        let field_el = child_el;
-                        let field_name = get_attribute(field_el, "name").unwrap();
-                        let field_value = make_field_value(field_el);
-                        block.fields.insert(field_name, field_value);
-                    },
-                    _ => {}
-                }
-            },
-            _ => {}
+        if let &ChildOfElement::Element(child_el) = child {
+            let child_name = child_el.name().local_part();
+            match child_name {
+                "statement" => {
+                    let statement_el = child_el;
+                    let statement_name = get_attribute(statement_el, "name").unwrap();
+                    let statement_body = StatementBody::new(get_first_child_element(statement_el));
+                    block.statements.insert(statement_name, statement_body);
+                },
+                "field" => {
+                    let field_el = child_el;
+                    let field_name = get_attribute(field_el, "name").unwrap();
+                    let field_value = make_field_value(field_el);
+                    block.fields.insert(field_name, field_value);
+                },
+                _ => {}
+            }
         }
     }
     block
