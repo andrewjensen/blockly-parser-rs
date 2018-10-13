@@ -54,7 +54,7 @@ impl StatementBody {
             block_el = el;
             loop {
                 blocks.push(Block::new(block_el));
-                if let Some(next_block) = get_next_block_element(block_el) {
+                if let Some(next_block) = get_next_block_element(&block_el) {
                     block_el = next_block;
                 } else {
                     break;
@@ -152,8 +152,8 @@ pub fn program_from_xml(xml: &str) -> Program {
     program
 }
 
-fn get_next_block_element(block_el: Element) -> Option<Element> {
-    let next_el = block_el.children()
+fn get_next_block_element<'a, 'b: 'a>(block_el: &'a Element<'b>) -> Option<Element<'b>> {
+    let next_el: Option<Element<'b>> = block_el.children()
         .iter()
         .filter_map(|child| {
             if let &ChildOfElement::Element(el) = child {
@@ -166,10 +166,10 @@ fn get_next_block_element(block_el: Element) -> Option<Element> {
         .next();
 
     if let Some(next_el) = next_el {
-        return next_el.children()
+        let next_block_el: Option<Element<'b>> = next_el.children()
             .iter()
-            .filter_map(|child| {
-                if let &ChildOfElement::Element(el) = child {
+            .filter_map(|&child| {
+                if let ChildOfElement::Element(el) = child {
                     if el.name().local_part() == "block" {
                         return Some(el);
                     }
@@ -177,6 +177,10 @@ fn get_next_block_element(block_el: Element) -> Option<Element> {
                 None
             })
             .next();
+        match next_block_el {
+            Some(el) => return Some(el),
+            None => return None
+        }
     }
 
     None
@@ -279,7 +283,7 @@ mod test {
         let fragment: Package = parser::parse(xml).expect("Failed to parse XML!");
         let root_element = get_fragment_root(&fragment).unwrap();
 
-        let next_block = get_next_block_element(root_element);
+        let next_block = get_next_block_element(&root_element);
         assert!(next_block.is_some());
         let next_block_unwrapped = next_block.unwrap();
         assert_eq!(get_attribute(next_block_unwrapped, "type"), Some("led_off".to_string()));
