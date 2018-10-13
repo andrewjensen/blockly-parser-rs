@@ -152,8 +152,8 @@ pub fn program_from_xml(xml: &str) -> Program {
     program
 }
 
-fn get_next_block_element<'a, 'b: 'a>(block_el: &'a Element<'b>) -> Option<Element<'b>> {
-    let next_el: Option<Element<'b>> = block_el.children()
+fn get_next_block_element<'b>(block_el: &Element<'b>) -> Option<Element<'b>> {
+    let next_el: Option<Element> = block_el.children()
         .iter()
         .filter_map(|child| {
             if let &ChildOfElement::Element(el) = child {
@@ -166,7 +166,7 @@ fn get_next_block_element<'a, 'b: 'a>(block_el: &'a Element<'b>) -> Option<Eleme
         .next();
 
     if let Some(next_el) = next_el {
-        let next_block_el: Option<Element<'b>> = next_el.children()
+        let next_block_el: Option<Element> = next_el.children()
             .iter()
             .filter_map(|&child| {
                 if let ChildOfElement::Element(el) = child {
@@ -177,10 +177,7 @@ fn get_next_block_element<'a, 'b: 'a>(block_el: &'a Element<'b>) -> Option<Eleme
                 None
             })
             .next();
-        match next_block_el {
-            Some(el) => return Some(el),
-            None => return None
-        }
+        return next_block_el;
     }
 
     None
